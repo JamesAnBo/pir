@@ -9,5 +9,7 @@ Ashitav4 addon that parses dice rolls (/random) and finds the winner.
 /pir list  -Prints current type, target, and rollers.
 /pir collect  -Toggles collecting rolls on/off.
 /pir clear  -Clears roll list and stops collecting rolls.
+/pir find <name>  -Find a roll by name.
+/pir remove <name>  -Remove a roll by name.
 /pir help  -Displays help information.
 ```
