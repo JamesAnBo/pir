@@ -144,7 +144,7 @@ local function print_help(isError)
 		{ '/pir ready <none|party|linkshell> <in-game minute>', 'Warns to prepare for rolling at given minute and begins collecting rolls.' },
 		{ '/pir done', 'Prints winner' },
 		{ '/pir list', 'Prints current type, target, and rollers.' },
-		{ '/pir collect', 'Begins collecting rolls.' },
+		{ '/pir collect', 'Toggles collecting rolls on/off.' },
 		{ '/pir clear', 'Clears roll list and stops collecting rolls.' },
         { '/pir help', 'Displays help information.' },
     };
