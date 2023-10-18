@@ -1,6 +1,6 @@
 addon.name      = 'PIR';
 addon.author    = 'Aesk';
-addon.version   = '1.0.0';
+addon.version   = '1.1.0';
 addon.desc      = 'The Price Is Right';
 addon.link      = 'https://github.com/JamesAnBo/';
 
@@ -22,8 +22,31 @@ local function isNum(str)
 	if (str == nil) then
 		return;
 	end
-
 	return not (str == "" or str:find("%D"))
+end
+
+local function removeRoll(name)
+	for k,v in pairs(pir.rolls) do
+		if k == name then
+		    local roll = pir.rolls[name]
+			pir.rolls[name] = nil
+			PPrint(name..' removed from rolls.')
+			return roll
+		end
+	end
+	PPrint('No roll found.')
+	return;
+end
+
+local function findRoll(name)
+	for k,v in pairs(pir.rolls) do
+		if k == name then
+			PPrint(k..': '..v);
+			return k;
+		end
+	end
+	PPrint('No roll found.')
+	return;
 end
 
 local function popRolls()
@@ -317,12 +340,15 @@ ashita.events.register('command', 'command_cb', function (e)
 					reset()
 					return;
 				end
-				
 			end
 			reset()
 			if pir.collect == false then
 				pir.collect = true;
 			end
+		elseif (cmd:any('remove','rm')) then
+			removeRoll(args[3])
+		elseif (cmd:any('find')) then
+			findRoll(args[3])
 		else
 			print_help(true);
 		end
