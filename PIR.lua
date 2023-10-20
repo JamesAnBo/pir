@@ -1,6 +1,6 @@
 addon.name      = 'PIR';
 addon.author    = 'Aesk';
-addon.version   = '1.1.0';
+addon.version   = '1.2.0';
 addon.desc      = 'The Price Is Right';
 addon.link      = 'https://github.com/JamesAnBo/';
 
@@ -25,12 +25,42 @@ local function isNum(str)
 	return not (str == "" or str:find("%D"))
 end
 
+local function popRolls()
+	local rolls = T{}
+	for k,v in pairs(pir.rolls) do
+		table.insert(rolls,v)
+	end
+	table.sort(rolls)
+	return rolls
+end
+
+function spairs(t, order)
+
+    local keys = {}
+    for k in pairs(t) do keys[#keys+1] = k end
+
+    if order then
+        table.sort(keys, function(a,b) return order(t, a, b) end)
+    else
+        table.sort(keys)
+    end
+
+    local i = 0
+    return function()
+        i = i + 1
+        if keys[i] then
+            return keys[i], t[keys[i]]
+        end
+    end
+end
+
 local function removeRoll(name)
 	for k,v in pairs(pir.rolls) do
-		if k == name then
+		if string.lower(k) == string.lower(name) then
 		    local roll = pir.rolls[name]
+			PPrint(k..' removed from rolls.')
 			pir.rolls[name] = nil
-			PPrint(name..' removed from rolls.')
+			
 			return roll
 		end
 	end
@@ -40,7 +70,7 @@ end
 
 local function findRoll(name)
 	for k,v in pairs(pir.rolls) do
-		if k == name then
+		if string.lower(k) == string.lower(name) then
 			PPrint(k..': '..v);
 			return k;
 		end
@@ -49,13 +79,6 @@ local function findRoll(name)
 	return;
 end
 
-local function popRolls()
-	local rolls = T{}
-	for k,v in pairs(pir.rolls) do
-		table.insert(rolls,v)
-	end
-	return rolls
-end
 
 local function findHighest()
 	local t = T{}
@@ -137,13 +160,14 @@ local function getData(e)
 		end
 	end
 	pir.rolls[t[1]] = tonumber(t[3])
+	--pir.rolls[tonumber(t[3])] = t[1];
 end
 
 local function list()
 	PPrint('Type: '..pir.type)
 	PPrint('Target roll: '..pir.toMatch)
 	PPrint('Rolls:')
-	for k, v in pairs(pir.rolls) do
+	for k,v in spairs(pir.rolls, function(t,a,b) return t[b] < t[a] end) do
 		PPrint(k..': '..v)
 	end
 end
@@ -164,9 +188,9 @@ local function print_help(isError)
     local cmds = T{
 		{ '/pir type <high|low|close|under|over>', 'Sets the win condition.' },
 		{ '/pir target <#>', 'Sets the target roll # for close, under, and over.' },
-		{ '/pir ready <none|party|linkshell> <in-game minute>', 'Warns to prepare for rolling at given minute and begins collecting rolls.' },
+		{ '/pir ready <none|pt|ls> <in-game minute>', 'Warns to prepare for rolling at given minute and begins collecting rolls.' },
 		{ '/pir done', 'Prints winner' },
-		{ '/pir list', 'Prints current type, target, and rollers.' },
+		{ '/pir list', 'Prints current type, target, and rollers (high to low).' },
 		{ '/pir collect', 'Toggles collecting rolls on/off.' },
 		{ '/pir clear', 'Clears roll list and stops collecting rolls.' },
 		{ '/pir find <name>', 'Find a roll by name.' },
@@ -202,6 +226,28 @@ ashita.events.register('command', 'command_cb', function (e)
 		if (cmd:any('help')) then
 			print_help(false);
 			return;
+		elseif (cmd:any('test')) then
+			pir.rolls = T{
+				['Test1'] = 243,
+				['Test2'] = 467,
+				['Test3'] = 257,
+				['Test4'] = 867,
+				['Test5'] = 547,
+				['Test6'] = 96,
+				['Test7'] = 467,
+			};
+			list()
+			PPrint('Highest:')
+			matchWinner(findHighest())
+			PPrint('Lowest:')
+			matchWinner(findLowest())
+			PPrint('Closest to '..pir.toMatch..':')
+			matchWinner(findClosest())
+			PPrint('Closest under '..pir.toMatch..':')
+			matchWinner(findUnder())
+			PPrint('Closest over '..pir.toMatch..':')
+			matchWinner(findOver())
+			reset()
 		elseif (cmd:any('list')) then
 			list()
 		elseif (cmd:any('collect','col')) then
@@ -276,12 +322,12 @@ ashita.events.register('command', 'command_cb', function (e)
 				return;
 			end
 			if (pir.type == 'high') then
-				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [@ :'..pir.time..']');
+				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [@:'..pir.time..']');
 				if (pir.chat ~= 'none') then
 					if (pir.chat:any('party','pt','p')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/p Highest roll wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/p Highest roll wins. /random @:'..pir.time);
 					elseif (pir.chat:any('linkshell','ls','l')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/l Highest roll wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/l Highest roll wins. /random @:'..pir.time);
 					end
 				else
 					PPrint('Unknown chat (\'party\' or \'linkshell\'')
@@ -289,12 +335,12 @@ ashita.events.register('command', 'command_cb', function (e)
 					return;
 				end
 			elseif (pir.type == 'low') then
-				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [@ :'..pir.time..']');
+				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [@:'..pir.time..']');
 				if (pir.chat ~= 'none') then
 					if (pir.chat:any('party','pt','p')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/p Lowest roll wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/p Lowest roll wins. /random @:'..pir.time);
 					elseif (pir.chat:any('linkshell','ls','l')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/l Lowest roll wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/l Lowest roll wins. /random @:'..pir.time);
 					end
 				else
 					PPrint('Unknown chat (\'party\' or \'linkshell\'')
@@ -302,12 +348,12 @@ ashita.events.register('command', 'command_cb', function (e)
 					return;
 				end
 			elseif (pir.type == 'close') then
-				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [Target: '..pir.toMatch..'] [@ :'..pir.time..']');
+				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [Target: '..pir.toMatch..'] [@:'..pir.time..']');
 				if (pir.chat ~= 'none') then
 					if (pir.chat:any('party','pt','p')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/p Closest roll to '..pir.toMatch..' wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/p Closest roll to '..pir.toMatch..' wins. /random @:'..pir.time);
 					elseif (pir.chat:any('linkshell','ls','l')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/t Closest roll to '..pir.toMatch..' wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/t Closest roll to '..pir.toMatch..' wins. /random @:'..pir.time);
 					end
 				else
 					PPrint('Unknown chat (\'party\' or \'linkshell\'')
@@ -316,12 +362,12 @@ ashita.events.register('command', 'command_cb', function (e)
 				end
 				
 			elseif (pir.type == 'under') then
-				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [Target: '..pir.toMatch..'] [@ :'..pir.time..']');
+				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [Target: '..pir.toMatch..'] [@:'..pir.time..']');
 				if (pir.chat ~= 'none') then
 					if (pir.chat:any('party','pt','p')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/p Highest roll under or equal to '..pir.toMatch..' wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/p Highest roll under or equal to '..pir.toMatch..' wins. /random @:'..pir.time);
 					elseif (pir.chat:any('linkshell','ls','l')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/l Highest roll under or equal to '..pir.toMatch..' wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/l Highest roll under or equal to '..pir.toMatch..' wins. /random @:'..pir.time);
 					end
 				else
 					PPrint('Unknown chat (\'party\' or \'linkshell\'')
@@ -330,12 +376,12 @@ ashita.events.register('command', 'command_cb', function (e)
 				end
 				
 			elseif (pir.type == 'over') then
-				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [Target: '..pir.toMatch..'] [@ :'..pir.time..']');
+				PPrint('[Type: '..pir.type..'] [Chat: '..pir.chat..'] [Target: '..pir.toMatch..'] [@:'..pir.time..']');
 				if (pir.chat ~= 'none') then
 					if (pir.chat:any('party','pt','p')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/p Lowest roll over or equal to'..pir.toMatch..' wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/p Lowest roll over or equal to'..pir.toMatch..' wins. /random @:'..pir.time);
 					elseif (pir.chat:any('linkshell','ls','l')) then
-						AshitaCore:GetChatManager():QueueCommand(1, '/l Lowest roll over or equal to'..pir.toMatch..' wins. /random @ :'..pir.time);
+						AshitaCore:GetChatManager():QueueCommand(1, '/l Lowest roll over or equal to'..pir.toMatch..' wins. /random @:'..pir.time);
 					end
 				else
 					PPrint('Unknown chat (Use \'party\' or \'linkshell\'')
@@ -347,7 +393,7 @@ ashita.events.register('command', 'command_cb', function (e)
 			if pir.collect == false then
 				pir.collect = true;
 			end
-		elseif (cmd:any('remove','rm')) then
+		elseif (cmd:any('remove','rmv','delete','dlt')) then
 			removeRoll(args[3])
 		elseif (cmd:any('find')) then
 			findRoll(args[3])
